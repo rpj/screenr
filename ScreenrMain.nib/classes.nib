@@ -24,6 +24,14 @@
 			<string>NSObject</string>
 		</dict>
 		<dict>
+			<key>CLASS</key>
+			<string>ScreenImageView</string>
+			<key>LANGUAGE</key>
+			<string>ObjC</string>
+			<key>SUPERCLASS</key>
+			<string>NSView</string>
+		</dict>
+		<dict>
 			<key>ACTIONS</key>
 			<dict>
 				<key>quitAction</key>
@@ -37,12 +45,8 @@
 			<string>ObjC</string>
 			<key>OUTLETS</key>
 			<dict>
-				<key>mDivSlider</key>
-				<string>NSSlider</string>
 				<key>mImageView</key>
-				<string>NSImageView</string>
-				<key>mModSlider</key>
-				<string>NSSlider</string>
+				<string>ScreenImageView</string>
 				<key>mSaveButton</key>
 				<string>NSButton</string>
 			</dict>

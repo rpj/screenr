@@ -7,90 +7,89 @@
 //
 
 #import "ScreenrController.h"
+#import "ScreenImageView.h"
 #import <QuartzCore/QuartzCore.h>
 
 @implementation ScreenrController
+
+- (float) mod { return mMod; }
+- (void) setMod:(float)value;
+{
+    mMod = value;
+    [self updateScreenshot];
+}
+
+- (float) div { return mDiv; }
+- (void) setDiv:(float)value;
+{
+    mDiv = value;
+    [self updateScreenshot];
+}
+
 - (void) awakeFromNib;
 {
-	[mDivSlider setMinValue: 2.0];
-	[mDivSlider setMaxValue: 10.0];
-	[mDivSlider setNumberOfTickMarks: 16];
-	[mDivSlider setAllowsTickMarkValuesOnly: YES];
-	[mDivSlider setFloatValue: 4.0];
-	[mDivSlider setTarget: self];
-	[mDivSlider setAction: @selector(updateScreenshot)];
-	
-	[mModSlider setMinValue: 1.0];
-	[mModSlider setMaxValue: 4.0];	
-	[mModSlider setNumberOfTickMarks: 12];	
-	[mModSlider setAllowsTickMarkValuesOnly: YES];	
-	[mModSlider setFloatValue: 2.0];	
-	[mModSlider setTarget: self];	
-	[mModSlider setAction: @selector(updateScreenshot)];
-	
+    mDiv = 11;
+    mMod = 5.5;
+
+    mFilter = [CIFilter filterWithName: @"CIPerspectiveTransform"];
+	[mFilter setDefaults];
+    
 	[self updateScreenshot];
 }
 
+- (void) dealloc;
+{
+    [mFilter release];
+    [super dealloc];
+}
+
 - (void) updateScreenshot;
-{	
-	[mDivSlider setEnabled: NO];
-	[mModSlider setEnabled: NO];
-	
+{  
+    //NSLog(@"mod: %f div: %f", mMod, mDiv);
+    
 	// get the screenshot
 	CGImageRef screenie = CGWindowListCreateImage(CGRectInfinite, kCGWindowListOptionOnScreenOnly, kCGNullWindowID, kCGWindowImageDefault);
 	
 	CGFloat sWidth = (CGFloat)CGImageGetWidth(screenie);
 	CGFloat sHeight = (CGFloat)CGImageGetHeight(screenie);
 	
-	CGFloat sWidthD = sWidth / [mDivSlider floatValue];
-	CGFloat sHeightD = sHeight / [mDivSlider floatValue];
-	
-	CGFloat sTimesMod = (CGFloat)[mModSlider floatValue];
+	CGFloat sWidthD = sWidth / mDiv;
+	CGFloat sHeightD = sHeight / mDiv;
 	
 	CIImage* cImg = [[CIImage alloc] initWithCGImage: screenie];
+	[mFilter setValue:cImg forKey: @"inputImage"];
+    [cImg release];
+    CGImageRelease(screenie);
 	
-	CIFilter* filter = [CIFilter filterWithName: @"CIPerspectiveTransform"];
-	[filter setDefaults];	
-	[filter setValue: cImg forKey: @"inputImage"];
-	
-	CIVector* topRight = [CIVector vectorWithX: sWidth + (sWidthD * sTimesMod) Y: sHeight + (sHeightD * sTimesMod)];
+	CIVector* topRight = [CIVector vectorWithX: sWidth + (sWidthD * mMod) Y: sHeight + (sHeightD * mMod)];
 	CIVector* topLeft = [CIVector vectorWithX: 0 Y: sHeight];
-	CIVector* botRight = [CIVector vectorWithX: sWidth Y: (sHeightD * sTimesMod)];
-	CIVector* botLeft = [CIVector vectorWithX: (sWidthD * sTimesMod) Y: 0];
+	CIVector* botRight = [CIVector vectorWithX: sWidth Y: (sHeightD * mMod)];
+	CIVector* botLeft = [CIVector vectorWithX: (sWidthD * mMod) Y: 0];
 	
-	[filter setValue: topLeft forKey: @"inputTopLeft"];
-	[filter setValue: topRight forKey: @"inputTopRight"];
-	[filter setValue: botRight forKey: @"inputBottomRight"];
-	[filter setValue: botLeft forKey: @"inputBottomLeft"];
+	[mFilter setValue: topLeft forKey: @"inputTopLeft"];
+	[mFilter setValue: topRight forKey: @"inputTopRight"];
+	[mFilter setValue: botRight forKey: @"inputBottomRight"];
+	[mFilter setValue: botLeft forKey: @"inputBottomLeft"];
 	
 	//CIFilter* gFilter = [CIFilter filterWithName: @"CIGloom"];
 	//[gFilter setDefaults];
 	//[gFilter setValue: [filter valueForKey: @"outputImage"] forKey: @"inputImage"];
 		
-	CIImage* resImg = [[filter valueForKey: @"outputImage"] 
-					   imageByCroppingToRect: CGRectMake(sWidthD * (sTimesMod + 1), 
-														 sHeightD * (sTimesMod + 1), 
-														 sWidth - (sWidthD * (sTimesMod + 1)), 
-														 sHeight - (sHeightD * (sTimesMod + 1)))];	
-	
-	// make an NSImage to display
-	[mLastImageRep release];
-	mLastImageRep = [[NSBitmapImageRep alloc] initWithCIImage: resImg];
-	
-	NSImage* img = [[NSImage alloc] init];	
-	[img addRepresentation: mLastImageRep];	
-	[mImageView setImage: img];
-	[img release];
-	
-	[mDivSlider setEnabled: YES];
-	[mModSlider setEnabled: YES];
+	CIImage* resImg = [[mFilter valueForKey: @"outputImage"] 
+					   imageByCroppingToRect: CGRectMake(sWidthD * (mMod + 1), 
+														 sHeightD * (mMod + 1), 
+														 sWidth - (sWidthD * (mMod + 1)), 
+														 sHeight - (sHeightD * (mMod + 1)))];
+    
+    mImageView.screenImage = resImg;
+    [mImageView setNeedsDisplay:YES];
 }
 
 - (IBAction) saveImage: (id) sender;
 {
 	static UInt32 saveCount = 0;
 	
-	if (mLastImageRep)
+	if (mImageView.screenImage)
 	{
 		if (!mSavePath)
 		{
@@ -108,9 +107,12 @@
 			}
 		}
 		
-		NSData* jpegRep = [mLastImageRep representationUsingType: NSJPEGFileType 
+        NSBitmapImageRep *bmpRep = [[NSBitmapImageRep alloc] initWithCIImage:mImageView.screenImage];
+        
+		NSData* jpegRep = [bmpRep representationUsingType: NSJPEGFileType 
 													  properties: [NSDictionary dictionaryWithObjectsAndKeys:
 																   [NSNumber numberWithBool: YES], NSImageProgressive, nil]];
+        [bmpRep release];
 		
 		NSString* thisSave = [NSString stringWithFormat: @"%@/%@_%03d.%@",
 							  [mSavePath stringByDeletingLastPathComponent],
@@ -128,9 +130,7 @@
 }
 
 - (NSApplicationTerminateReply) applicationShouldTerminate: (NSApplication*) sender;
-{
-	[mLastImageRep release];
-	
+{	
 	return NSTerminateNow;
 }
 @end

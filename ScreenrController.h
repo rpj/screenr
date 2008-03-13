@@ -8,17 +8,22 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface ScreenrController : NSObject {
-	IBOutlet NSImageView*	mImageView;
-	
-	IBOutlet NSSlider*		mDivSlider;
-	IBOutlet NSSlider*		mModSlider;
-	
+@class ScreenImageView;
+
+@interface ScreenrController : NSObject {	
 	IBOutlet NSButton*		mSaveButton;
-	
-	NSBitmapImageRep*		mLastImageRep;
+    
 	NSString*				mSavePath;
+
+    float mDiv;
+    float mMod;
+    
+    CIFilter *mFilter;
+    IBOutlet ScreenImageView *mImageView;
 }
+
+@property (assign) float div;
+@property (assign) float mod;
 
 - (void) awakeFromNib;
 
