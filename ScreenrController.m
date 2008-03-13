@@ -7,6 +7,7 @@
 //
 
 #import "ScreenrController.h"
+#import <QuartzCore/QuartzCore.h>
 
 @implementation ScreenrController
 - (void) awakeFromNib;
